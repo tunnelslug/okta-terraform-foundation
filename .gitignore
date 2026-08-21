@@ -1,0 +1,25 @@
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/crash.log
+**/crash.*.log
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+*.tfvars
+!*.tfvars.example
+backend.hcl
+*.pem
+*.key
+.private_key*
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+.secrets/
