@@ -1,0 +1,5 @@
+bucket = "YOUR_COMPANY-terraform-state"
+key = "okta/dev/governance/terraform.tfstate"
+region = "us-east-1"
+dynamodb_table = "terraform-locks"
+encrypt = true
