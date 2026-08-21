@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+  - package-ecosystem: "terraform"
+    directory: "/live/dev/identity"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "terraform"
+  - package-ecosystem: "terraform"
+    directory: "/ci/aws/terraform"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "terraform"

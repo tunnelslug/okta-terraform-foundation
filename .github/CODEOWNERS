@@ -1,0 +1,14 @@
+# CODEOWNERS for okta-terraform-foundation
+# Replace @teams with your GitHub handles or team slugs after forking.
+
+*                              @YOUR_ORG/identity-platform
+/modules/                      @YOUR_ORG/identity-platform
+/live/*/identity/              @YOUR_ORG/identity-platform
+/live/*/apps/                  @YOUR_ORG/app-iam
+/live/*/policies/              @YOUR_ORG/security-iam
+/live/*/authz/                 @YOUR_ORG/platform-security
+/live/*/governance/            @YOUR_ORG/governance
+/ci/                           @YOUR_ORG/identity-platform
+/.github/                      @YOUR_ORG/identity-platform
+/docs/AUTH.md                  @YOUR_ORG/identity-platform @YOUR_ORG/security-iam
+/docs/OWNERSHIP.md             @YOUR_ORG/identity-platform
