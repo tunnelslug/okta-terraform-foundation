@@ -1,8 +1,18 @@
-aws_region = "us-east-1"
-project_name = "okta-terraform"
-github_owner = "YOUR_ORG"
-github_repo = "okta-terraform-foundation"
-codestar_connection_arn = "arn:aws:codestar-connections:..."
-terraform_state_bucket = "YOUR_COMPANY-terraform-state"
-slack_webhook_secret_arn = "arn:aws:secretsmanager:..."
-okta_credentials_secret_arn = "arn:aws:secretsmanager:..."
+aws_region               = "us-east-1"
+project_name             = "okta-terraform"
+github_owner             = "YOUR_ORG"
+github_repo              = "okta-terraform-template"
+github_branch            = "main"
+codestar_connection_arn  = "arn:aws:codestar-connections:us-east-1:123456789012:connection/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+terraform_state_bucket   = "YOUR_COMPANY-terraform-state"
+terraform_lock_table     = "terraform-locks"
+slack_webhook_secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:okta-terraform/slack-webhook-xxxxxx"
+okta_credentials_secret_arn = "arn:aws:secretsmanager:us-east-1:123456789012:secret:okta-terraform/oidc-xxxxxx"
+enable_apply_stage       = true
+default_env              = "dev"
+plan_on_module_change    = false
+
+tags = {
+  Project = "okta-terraform"
+  Managed = "terraform"
+}
