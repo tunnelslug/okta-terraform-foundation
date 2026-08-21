@@ -1,0 +1,5 @@
+okta_org_name       = "dev-123456"
+okta_base_url       = "oktapreview.com"
+okta_client_id      = "0oaXXXXXXXXXXXXXXX"
+okta_private_key_id = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+environment         = "dev"
