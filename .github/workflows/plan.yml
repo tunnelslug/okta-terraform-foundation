@@ -24,7 +24,7 @@ jobs:
       stacks: ${{ steps.list.outputs.stacks }}
       has_stacks: ${{ steps.list.outputs.has_stacks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Detect stacks
@@ -54,7 +54,7 @@ jobs:
       matrix:
         stack: ${{ fromJson(needs.detect.outputs.stacks) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
