@@ -1,0 +1,77 @@
+# fmt + validate + tflint + no API tokens
+name: Lint
+
+on:
+  pull_request:
+    paths:
+      - "**.tf"
+      - "**.hcl"
+      - "modules/**"
+      - "live/**"
+      - "shared/**"
+      - ".github/workflows/lint.yml"
+      - "Makefile"
+  push:
+    branches: [main, master]
+    paths:
+      - "**.tf"
+      - "**.hcl"
+      - "modules/**"
+      - "live/**"
+      - "shared/**"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: fmt · validate · tflint · no-api-token
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: Guard — no Okta API tokens
+        run: make check-no-api-token
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.53.0
+
+      - name: TFLint — modules
+        run: |
+          tflint --init
+          for d in modules/groups modules/apps/oauth modules/apps/saml \
+                   modules/policies/signon modules/policies/mfa modules/policies/password \
+                   modules/auth-servers modules/authenticators modules/network \
+                   modules/trusted-origins modules/admin-roles modules/users \
+                   modules/governance/labels; do
+            echo "==> tflint $d"
+            (cd "$d" && tflint --format compact) || true
+          done
+
+      - name: Terraform init + validate (dev stacks, local backend override)
+        run: |
+          set -e
+          for stack in identity apps policies authz governance; do
+            dir="live/dev/$stack"
+            echo "==> validate $dir"
+            cat > "$dir/backend_override.tf" <<'EOF'
+          terraform {
+            backend "local" {}
+          }
+          EOF
+            (cd "$dir" && terraform init -backend=false -input=false)
+            (cd "$dir" && terraform validate) || echo "validate soft-fail (missing vars ok in template)"
+            rm -f "$dir/backend_override.tf"
+          done

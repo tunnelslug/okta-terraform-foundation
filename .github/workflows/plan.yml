@@ -1,0 +1,93 @@
+name: Plan
+
+on:
+  pull_request:
+    paths:
+      - "live/**"
+      - "modules/**"
+      - "ci/aws/scripts/**"
+      - ".github/workflows/plan.yml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: plan-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    name: Detect changed stacks
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.list.outputs.stacks }}
+      has_stacks: ${{ steps.list.outputs.has_stacks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect stacks
+        id: list
+        run: |
+          chmod +x ci/aws/scripts/detect_changed_stacks.sh
+          export BASE_REF="origin/${{ github.base_ref || 'main' }}"
+          export HEAD_REF="HEAD"
+          export CHANGED_STACKS_FILE="/tmp/changed_stacks.txt"
+          git fetch origin "${{ github.base_ref || 'main' }}" --depth=1 || true
+          ci/aws/scripts/detect_changed_stacks.sh || true
+          if [[ -s /tmp/changed_stacks.txt ]]; then
+            stacks=$(jq -R -s -c 'split("\n") | map(select(length>0))' /tmp/changed_stacks.txt)
+            echo "stacks=$stacks" >> "$GITHUB_OUTPUT"
+            echo "has_stacks=true" >> "$GITHUB_OUTPUT"
+          else
+            echo 'stacks=[]' >> "$GITHUB_OUTPUT"
+            echo "has_stacks=false" >> "$GITHUB_OUTPUT"
+          fi
+  plan:
+    name: Plan ${{ matrix.stack }}
+    needs: detect
+    if: needs.detect.outputs.has_stacks == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: ${{ fromJson(needs.detect.outputs.stacks) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+      - name: Check for Okta OIDC secrets
+        id: secrets
+        run: |
+          if [[ -n "${{ secrets.OKTA_API_CLIENT_ID }}" && -n "${{ secrets.OKTA_API_PRIVATE_KEY }}" ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Okta OIDC secrets not configured — skipping real plan."
+          fi
+      - name: Terraform plan
+        if: steps.secrets.outputs.present == 'true'
+        working-directory: live/${{ matrix.stack }}
+        env:
+          TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
+          TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
+          TF_VAR_okta_client_id: ${{ secrets.OKTA_API_CLIENT_ID }}
+          TF_VAR_okta_private_key: ${{ secrets.OKTA_API_PRIVATE_KEY }}
+          TF_VAR_okta_private_key_id: ${{ secrets.OKTA_API_PRIVATE_KEY_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+        run: |
+          set -euo pipefail
+          if [[ -f backend.hcl ]]; then terraform init -input=false -backend-config=backend.hcl
+          else terraform init -input=false -backend=false; fi
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode 2>&1 | tee /tmp/plan.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          if [[ $code -eq 1 ]]; then exit 1; fi
+          exit 0

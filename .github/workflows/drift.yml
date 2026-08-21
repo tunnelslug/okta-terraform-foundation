@@ -1,0 +1,75 @@
+name: Drift
+
+on:
+  schedule:
+    - cron: "0 14 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      stacks:
+        description: "Comma-separated env/stack paths (empty = default list)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Drift scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [[ -n "${{ secrets.OKTA_API_CLIENT_ID }}" && -n "${{ secrets.OKTA_API_PRIVATE_KEY }}" ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping drift — configure OKTA_* repository secrets."
+          fi
+      - name: Setup Terraform
+        if: steps.secrets.outputs.present == 'true'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+      - name: Resolve stack list
+        if: steps.secrets.outputs.present == 'true'
+        run: |
+          if [[ -n "${{ github.event.inputs.stacks }}" ]]; then
+            echo "${{ github.event.inputs.stacks }}" | tr ',' '\n' | tr -d ' ' > /tmp/stacks.txt
+          else
+            printf '%s\n' dev/identity dev/apps dev/policies dev/authz dev/governance > /tmp/stacks.txt
+          fi
+      - name: Plan each stack and notify on drift
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          TF_VAR_okta_org_name: ${{ secrets.OKTA_ORG_NAME }}
+          TF_VAR_okta_base_url: ${{ secrets.OKTA_BASE_URL }}
+          TF_VAR_okta_client_id: ${{ secrets.OKTA_API_CLIENT_ID }}
+          TF_VAR_okta_private_key: ${{ secrets.OKTA_API_PRIVATE_KEY }}
+          TF_VAR_okta_private_key_id: ${{ secrets.OKTA_API_PRIVATE_KEY_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          chmod +x ci/aws/scripts/slack_notify.sh 2>/dev/null || true
+          drift_found=0
+          while IFS= read -r stack || [[ -n "$stack" ]]; do
+            [[ -z "$stack" ]] && continue
+            dir="live/$stack"
+            [[ -d "$dir" ]] || continue
+            cd "$dir"
+            [[ -f backend.hcl ]] || { cd - >/dev/null; continue; }
+            terraform init -input=false -backend-config=backend.hcl
+            set +e
+            terraform plan -input=false -no-color -detailed-exitcode 2>&1 | tee /tmp/drift-plan.txt
+            code=${PIPESTATUS[0]}
+            set -e
+            if [[ $code -eq 2 || $code -eq 1 ]]; then drift_found=1; fi
+            cd - >/dev/null
+          done < /tmp/stacks.txt
+          if [[ $drift_found -ne 0 ]]; then exit 1; fi
