@@ -1,0 +1,2 @@
+bucket = "YOUR_COMPANY-terraform-state"
+prefix = "okta/ENV/STACK"
