@@ -1,0 +1,12 @@
+# Copy to backend.hcl (gitignored) or pass via:
+#   terraform init -backend-config=backend.hcl.example
+
+bucket         = "YOUR_COMPANY-terraform-state"
+key            = "okta/staging/identity/terraform.tfstate"
+region         = "us-east-1"
+dynamodb_table = "terraform-locks"
+encrypt        = true
+
+# --- GCS alternative ---
+# bucket = "YOUR_COMPANY-terraform-state"
+# prefix = "okta/staging/identity"
