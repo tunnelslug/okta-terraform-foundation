@@ -1,0 +1,13 @@
+okta_org_name          = "dev-123456"
+okta_base_url          = "oktapreview.com"
+okta_client_id         = "0oaXXXXXXXXXXXXXXX"
+okta_private_key_id    = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+environment            = "dev"
+
+identity_state_bucket  = "YOUR_COMPANY-terraform-state"
+identity_state_key     = "okta/prod/identity/terraform.tfstate"
+identity_state_region  = "us-east-1"
+
+# Optional until policies stack exists
+# policies_state_bucket = "YOUR_COMPANY-terraform-state"
+# policies_state_key    = "okta/prod/policies/terraform.tfstate"
