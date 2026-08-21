@@ -1,0 +1,32 @@
+version: 0.2
+env:
+  variables:
+    TF_IN_AUTOMATION: "true"
+    TF_INPUT: "0"
+    CHANGED_STACKS_FILE: "/tmp/changed_stacks.txt"
+phases:
+  install:
+    runtime-versions:
+      python: 3.12
+    commands:
+      - curl -fsSL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION:-1.9.8}/terraform_${TERRAFORM_VERSION:-1.9.8}_linux_amd64.zip -o /tmp/tf.zip
+      - unzip -o /tmp/tf.zip -d /usr/local/bin
+      - terraform version
+      - chmod +x ci/aws/scripts/*.sh
+  pre_build:
+    commands:
+      - export BASE_REF="${BASE_REF:-origin/${DEFAULT_BRANCH:-main}}"
+      - git fetch origin "${DEFAULT_BRANCH:-main}" || true
+      - ci/aws/scripts/detect_changed_stacks.sh
+  build:
+    commands:
+      - |
+        while IFS= read -r stack || [[ -n "$stack" ]]; do
+          [[ -z "$stack" ]] && continue
+          echo "===== PLAN $stack ====="
+          ci/aws/scripts/run_stack.sh plan "$stack"
+        done < "$CHANGED_STACKS_FILE"
+artifacts:
+  files:
+    - '**/*'
+  name: plan-artifacts
