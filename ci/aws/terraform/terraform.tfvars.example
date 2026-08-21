@@ -1,0 +1,8 @@
+aws_region = "us-east-1"
+project_name = "okta-terraform"
+github_owner = "YOUR_ORG"
+github_repo = "okta-terraform-foundation"
+codestar_connection_arn = "arn:aws:codestar-connections:..."
+terraform_state_bucket = "YOUR_COMPANY-terraform-state"
+slack_webhook_secret_arn = "arn:aws:secretsmanager:..."
+okta_credentials_secret_arn = "arn:aws:secretsmanager:..."
